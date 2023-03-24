@@ -49,7 +49,7 @@ configure_container() {
             checkpath --directory --mode 0775 /run/\${RC_SVCNAME}
         }' > /etc/init.d/whoogle" >/dev/null
 
-  lxc-attach -n "$NEXTID" -e -- ash -c "chmod 755 /etc/init.d/whoogle;/etc/init.d/whoogle start" >/dev/null
+  lxc-attach -n "$NEXTID" -e -- ash -c "chmod 755 /etc/init.d/whoogle;/etc/init.d/whoogle start;rc-update add whoogle boot" >/dev/null
 
 }
 
