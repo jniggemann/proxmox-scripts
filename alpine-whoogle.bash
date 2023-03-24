@@ -8,9 +8,9 @@
 #==============================================================================
 
 # You may change these settings
-DISKSIZE="0.2"      # This means 0.2GB
-RAM="256"           # This is an upper limit, LXC containers only use the RAM they need anyway.
-HOSTNAME="whoogle3" # This will be the new hostname, set it to whatever you like
+DISKSIZE="0.2"     # This means 0.2GB
+RAM="256"          # This is an upper limit, LXC containers only use the RAM they need anyway.
+HOSTNAME="whoogle" # This will be the new hostname, set it to whatever you like
 
 ##################################
 ### No changes below this point###
@@ -27,6 +27,7 @@ create_container() {
 
 # Configure the newly-created container and install the software
 configure_container() {
+  sleep 5 # else we're too fast and can't disable syslog
   # stop container's syslog and disable it. Also set root password to empty
   lxc-attach -n "$NEXTID" -e -- ash -c "/etc/init.d/syslog stop;rc-update del syslog boot;passwd -d root" >/dev/null 2>&1
 
