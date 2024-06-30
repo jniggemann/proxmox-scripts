@@ -2,8 +2,8 @@
 #title           :create_alpine_whoogle.bash
 #description     :Will create a tiny alpine-whoogle LXC on your proxmox host
 #author          :https://github.com/jniggemann/proxmox-scripts
-#date            :20230324
-#version         :0.3
+#date            :20240630
+#version         :0.4
 #license         :GPL v2
 #==============================================================================
 
@@ -20,7 +20,7 @@ HOSTNAME="whoogle" # This will be the new hostname, set it to whatever you like
 create_container() {
   pct create $NEXTID local:vztmpl/$TEMPLATE -arch amd64 \
     -cores 1 -memory $RAM -net0 bridge=vmbr0,name=eth0,ip=dhcp,firewall=1 \
-    -rootfs local-lvm:$DISKSIZE -swap 0 -ostype alpine -hostname $HOSTNAME -unprivileged 1 \
+    -rootfs $LXCSTORAGE:$DISKSIZE -swap 0 -ostype alpine -hostname $HOSTNAME -unprivileged 1 \
     -features keyctl=1,nesting=1 -start 1 >/dev/null ||
     exit "❌  There was a problem and I could not create your container."
 }
@@ -32,7 +32,7 @@ configure_container() {
   lxc-attach -n "$NEXTID" -e -- ash -c "/etc/init.d/syslog stop;rc-update del syslog boot;passwd -d root" >/dev/null 2>&1
 
   # install pip3, install whoogle and its service file, start whoogle
-  lxc-attach -n "$NEXTID" -e -- ash -c "apk add --no-cache py3-pip;pip3 install --no-cache-dir brotli >/dev/null;pip3 install --no-cache-dir whoogle-search >/dev/null" >/dev/null 2>&1
+  lxc-attach -n "$NEXTID" -e -- ash -c "apk add --no-cache py3-pip;pip3 install --no-cache-dir --break-system-packages brotli >/dev/null;pip3 install --no-cache-dir --break-system-packages whoogle-search >/dev/null" >/dev/null 2>&1
   lxc-attach -n "$NEXTID" -e -- ash -c "echo '#!/sbin/openrc-run
 
         depend() {
@@ -66,8 +66,13 @@ select_template() {
 }
 
 # Look for first storage where templates can be stored
-get_first_storage() {
+get_first_template_storage() {
   STORAGE=$(pvesm status --enabled --content vztmpl | tail -n +2 | awk '{print $1}')
+}
+
+# Look for first storage where containers can be stored
+get_first_lxc_storage() {
+  LXCSTORAGE=$(pvesm status --enabled --content rootdir | tail -n +2 | awk '{print $1}')
 }
 
 # Check if template is already there
@@ -104,7 +109,8 @@ NEXTID=$(pvesh get /cluster/nextid)
 echo -e "Will now install ${BYellow}whoogle${Color_Off}..."
 select_template
 echo -e " ${BGreen}*${Color_Off} ${BYellow}$TEMPLATE${Color_Off} is the most recent alpine template. We'll use it."
-get_first_storage
+get_first_template_storage
+get_first_lxc_storage
 check_template_available
 create_container
 configure_container
